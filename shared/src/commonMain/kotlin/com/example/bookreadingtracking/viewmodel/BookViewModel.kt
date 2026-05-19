@@ -114,4 +114,12 @@ class BookViewModel : ViewModel() {
         books.remove(book)
         saveBooks()
     }
+
+    fun updateBookStatus(bookId: String, newStatus: com.example.bookreadingtracking.model.ReadingStatus) {
+        val index = books.indexOfFirst { it.id == bookId }
+        if (index != -1) {
+            books[index] = books[index].copy(status = newStatus)
+            saveBooks()
+        }
+    }
 }

@@ -5,13 +5,19 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 @Serializable
+enum class ReadingStatus {
+    TO_READ, READING, PAUSED, READ
+}
+
+@Serializable
 data class Book(
     val id: String,
     val filePath: String,
     val metadata: BookMetadata,
     val currentPage: Int = 0,
     val totalTimeSpentMillis: Long = 0,
-    val lastReadTime: Long = 0
+    val lastReadTime: Long = 0,
+    val status: ReadingStatus = ReadingStatus.TO_READ
 )
 
 @Serializable
