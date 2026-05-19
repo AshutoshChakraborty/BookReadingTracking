@@ -1,14 +1,14 @@
 package com.example.bookreadingtracking.platform
 
-import com.example.bookreadingtracking.model.Book
+import com.example.bookreadingtracking.model.DataState
 
 class IosPersistenceHandler : PersistenceHandler {
-    override fun saveBooks(books: List<Book>) {
+    override fun saveData(data: DataState) {
         // Not implemented for iOS
     }
 
-    override fun loadBooks(): List<Book> {
-        return emptyList()
+    override fun loadData(): DataState {
+        return DataState()
     }
 }
 

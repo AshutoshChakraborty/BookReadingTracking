@@ -12,6 +12,7 @@ enum class ReadingStatus {
 @Serializable
 data class Book(
     val id: String,
+    val planId: String, // Associated plan
     val filePath: String,
     val metadata: BookMetadata,
     val currentPage: Int = 0,

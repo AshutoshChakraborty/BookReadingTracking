@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bookreadingtracking.model.Book
+import com.example.bookreadingtracking.model.DataState
+import com.example.bookreadingtracking.model.Plan
 import com.example.bookreadingtracking.platform.getPdfHandler
 import com.example.bookreadingtracking.platform.getPersistenceHandler
 import kotlinx.coroutines.launch
@@ -15,30 +17,39 @@ import kotlinx.datetime.Clock
 class BookViewModel : ViewModel() {
     private val pdfHandler = getPdfHandler()
     private val persistenceHandler = getPersistenceHandler()
-    val books = mutableStateListOf<Book>()
+    
+    val plans = mutableStateListOf<Plan>()
+    val allBooks = mutableStateListOf<Book>()
+    
+    var currentPlanId by mutableStateOf<String?>(null)
+    
+    val filteredBooks: List<Book>
+        get() = allBooks.filter { it.planId == currentPlanId }
     
     init {
-        loadBooks()
+        loadData()
     }
 
-    private fun loadBooks() {
+    private fun loadData() {
         viewModelScope.launch {
-            val loadedBooks = persistenceHandler.loadBooks()
-            books.clear()
-            books.addAll(loadedBooks)
+            val data = persistenceHandler.loadData()
+            plans.clear()
+            plans.addAll(data.plans)
+            allBooks.clear()
+            allBooks.addAll(data.books)
             
-            // Re-extract thumbnails for loaded books
-            loadedBooks.forEachIndexed { index, book ->
+            // Re-extract thumbnails
+            allBooks.forEachIndexed { index, book ->
                 val metadata = pdfHandler.extractMetadata(book.filePath)
                 if (metadata != null) {
-                    books[index] = book.copy(metadata = metadata)
+                    allBooks[index] = book.copy(metadata = metadata)
                 }
             }
         }
     }
 
-    private fun saveBooks() {
-        persistenceHandler.saveBooks(books.toList())
+    private fun saveData() {
+        persistenceHandler.saveData(DataState(plans.toList(), allBooks.toList()))
     }
 
     // Track which book is currently being read to calculate time
@@ -46,20 +57,44 @@ class BookViewModel : ViewModel() {
         private set
     private var startTimeMillis: Long = 0
 
+    fun addPlan(title: String) {
+        val newPlan = Plan(
+            id = Clock.System.now().toEpochMilliseconds().toString(),
+            title = title
+        )
+        plans.add(newPlan)
+        saveData()
+    }
+
+    fun deletePlan(plan: Plan) {
+        plans.remove(plan)
+        allBooks.removeAll { it.planId == plan.id }
+        if (currentPlanId == plan.id) {
+            currentPlanId = null
+        }
+        saveData()
+    }
+
+    fun selectPlan(planId: String?) {
+        currentPlanId = planId
+    }
+
     fun addPdf() {
+        val planId = currentPlanId ?: return
         viewModelScope.launch {
             val path = pdfHandler.pickPdf()
             if (path != null) {
                 val metadata = pdfHandler.extractMetadata(path)
                 if (metadata != null) {
                     val progress = pdfHandler.getReadingProgress(path) ?: 0
-                    books.add(Book(
-                        id = path,
+                    allBooks.add(Book(
+                        id = Clock.System.now().toEpochMilliseconds().toString(),
+                        planId = planId,
                         filePath = path,
                         metadata = metadata,
                         currentPage = progress
                     ))
-                    saveBooks()
+                    saveData()
                 }
             }
         }
@@ -77,49 +112,49 @@ class BookViewModel : ViewModel() {
         val now = Clock.System.now().toEpochMilliseconds()
         val duration = now - startTimeMillis
         
-        val index = books.indexOfFirst { it.id == id }
+        val index = allBooks.indexOfFirst { it.id == id }
         if (index != -1) {
-            val book = books[index]
+            val book = allBooks[index]
             val updatedBook = book.copy(
                 totalTimeSpentMillis = book.totalTimeSpentMillis + duration,
                 lastReadTime = now
             )
-            books[index] = updatedBook
+            allBooks[index] = updatedBook
             refreshProgress(updatedBook) // Try to sync progress after reading
-            saveBooks()
+            saveData()
         }
         activeBookId = null
     }
 
     fun refreshProgress(book: Book) {
         val progress = pdfHandler.getReadingProgress(book.filePath) ?: return
-        val index = books.indexOfFirst { it.id == book.id }
+        val index = allBooks.indexOfFirst { it.id == book.id }
         if (index != -1) {
-            books[index] = books[index].copy(currentPage = progress)
-            saveBooks()
+            allBooks[index] = allBooks[index].copy(currentPage = progress)
+            saveData()
         }
     }
 
     fun refreshAllProgress() {
-        books.forEachIndexed { index, book ->
+        allBooks.forEachIndexed { index, book ->
             val progress = pdfHandler.getReadingProgress(book.filePath)
             if (progress != null) {
-                books[index] = book.copy(currentPage = progress)
+                allBooks[index] = book.copy(currentPage = progress)
             }
         }
-        saveBooks()
+        saveData()
     }
 
     fun removeBook(book: Book) {
-        books.remove(book)
-        saveBooks()
+        allBooks.remove(book)
+        saveData()
     }
 
     fun updateBookStatus(bookId: String, newStatus: com.example.bookreadingtracking.model.ReadingStatus) {
-        val index = books.indexOfFirst { it.id == bookId }
+        val index = allBooks.indexOfFirst { it.id == bookId }
         if (index != -1) {
-            books[index] = books[index].copy(status = newStatus)
-            saveBooks()
+            allBooks[index] = allBooks[index].copy(status = newStatus)
+            saveData()
         }
     }
 }

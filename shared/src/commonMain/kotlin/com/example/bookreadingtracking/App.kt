@@ -36,77 +36,94 @@ import com.example.bookreadingtracking.model.ReadingStatus
 import com.example.bookreadingtracking.viewmodel.BookViewModel
 import androidx.compose.ui.tooling.preview.Preview
 
+import androidx.compose.material.icons.filled.ArrowBack
+import com.example.bookreadingtracking.ui.PlanListScreen
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
     val viewModel: BookViewModel = viewModel { BookViewModel() }
+    val currentPlanId = viewModel.currentPlanId
     
     MaterialTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Book Tracker Kanban") },
-                    actions = {
-                        IconButton(onClick = { viewModel.refreshAllProgress() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh All")
+        if (currentPlanId == null) {
+            PlanListScreen(
+                viewModel = viewModel,
+                onPlanClick = { plan -> viewModel.selectPlan(plan.id) }
+            )
+        } else {
+            val currentPlan = viewModel.plans.find { it.id == currentPlanId }
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text(currentPlan?.title ?: "Plan Details") },
+                        navigationIcon = {
+                            IconButton(onClick = { viewModel.selectPlan(null) }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back to Plans")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { viewModel.refreshAllProgress() }) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh All")
+                            }
                         }
+                    )
+                },
+                floatingActionButton = {
+                    FloatingActionButton(onClick = { viewModel.addPdf() }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add PDF")
                     }
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { viewModel.addPdf() }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add PDF")
-                }
-            },
-            bottomBar = {
-                viewModel.activeBookId?.let { activeId ->
-                    val book = viewModel.books.find { it.id == activeId }
-                    if (book != null) {
-                        Surface(
-                            tonalElevation = 8.dp,
-                            shadowElevation = 8.dp,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                },
+                bottomBar = {
+                    viewModel.activeBookId?.let { activeId ->
+                        val book = viewModel.allBooks.find { it.id == activeId }
+                        if (book != null) {
+                            Surface(
+                                tonalElevation = 8.dp,
+                                shadowElevation = 8.dp,
+                                color = MaterialTheme.colorScheme.primaryContainer
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        "Reading: ${book.metadata.title}",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        "Timer started...",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                Button(
-                                    onClick = { viewModel.stopReading() },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Red,
-                                        contentColor = Color.White
-                                    )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Stop Reading")
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "Reading: ${book.metadata.title}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            "Timer started...",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Button(
+                                        onClick = { viewModel.stopReading() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color.Red,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Text("Stop Reading")
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-        ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                if (viewModel.books.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No books added yet. Click + to add a PDF.")
+            ) { padding ->
+                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    if (viewModel.filteredBooks.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No books added to this plan yet. Click + to add a PDF.")
+                        }
+                    } else {
+                        KanbanBoard(viewModel)
                     }
-                } else {
-                    KanbanBoard(viewModel)
                 }
             }
         }
@@ -119,6 +136,7 @@ fun KanbanBoard(viewModel: BookViewModel) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var currentTargetStatus by remember { mutableStateOf<ReadingStatus?>(null) }
     val columnBounds = remember { mutableStateMapOf<ReadingStatus, androidx.compose.ui.geometry.Rect>() }
+    val books = viewModel.filteredBooks
 
     Row(
         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -127,7 +145,7 @@ fun KanbanBoard(viewModel: BookViewModel) {
         ReadingStatus.entries.forEach { status ->
             KanbanColumn(
                 status = status,
-                books = viewModel.books.filter { it.status == status },
+                books = books.filter { it.status == status },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -171,7 +189,7 @@ fun KanbanBoard(viewModel: BookViewModel) {
 
     // Overlay for the dragged item
     draggedBookId?.let { id ->
-        val book = viewModel.books.find { it.id == id }
+        val book = books.find { it.id == id }
         if (book != null) {
             Box(
                 modifier = Modifier
@@ -430,6 +448,7 @@ fun formatTime(millis: Long): String {
 fun BookCardPreview() {
     val sampleBook = Book(
         id = "1",
+        planId = "default",
         filePath = "/path/to/book.pdf",
         metadata = BookMetadata(
             title = "Kotlin Multiplatform in Action",
@@ -459,6 +478,7 @@ fun KanbanColumnPreview() {
     val sampleBooks = listOf(
         Book(
             id = "1",
+            planId = "default",
             filePath = "/path/to/book1.pdf",
             metadata = BookMetadata(
                 title = "Kotlin Multiplatform in Action",
@@ -472,6 +492,7 @@ fun KanbanColumnPreview() {
         ),
         Book(
             id = "2",
+            planId = "default",
             filePath = "/path/to/book2.pdf",
             metadata = BookMetadata(
                 title = "Compose Multiplatform for Beginners",
