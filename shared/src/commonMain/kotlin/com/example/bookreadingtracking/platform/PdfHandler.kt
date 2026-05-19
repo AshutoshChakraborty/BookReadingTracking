@@ -6,6 +6,7 @@ interface PdfHandler {
     suspend fun pickPdf(): String?
     fun openPdf(filePath: String)
     suspend fun extractMetadata(filePath: String): BookMetadata?
+    fun getReadingProgress(filePath: String): Int?
 }
 
 expect fun getPdfHandler(): PdfHandler

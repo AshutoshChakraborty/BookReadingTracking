@@ -57,6 +57,10 @@ class AndroidPdfHandler(private val context: Context) : PdfHandler {
             null
         }
     }
+
+    override fun getReadingProgress(filePath: String): Int? {
+        return null // Automatic progress tracking not yet implemented for generic Android apps
+    }
 }
 
 // We need a way to provide the context. In KMP Android, this is often done via a singleton or platform initialization.

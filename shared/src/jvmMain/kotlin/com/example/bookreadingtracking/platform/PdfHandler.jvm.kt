@@ -58,6 +58,33 @@ class JvmPdfHandler : PdfHandler {
             null
         }
     }
+
+    override fun getReadingProgress(filePath: String): Int? {
+        val appData = System.getenv("LOCALAPPDATA") ?: return null
+        val settingsFile = File(appData, "SumatraPDF/SumatraPDF-settings.txt")
+        if (!settingsFile.exists()) return null
+
+        try {
+            val lines = settingsFile.readLines()
+            var foundFile = false
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed.startsWith("FilePath = $filePath", ignoreCase = true)) {
+                    foundFile = true
+                }
+                if (foundFile && trimmed.startsWith("PageNo =", ignoreCase = true)) {
+                    return trimmed.substringAfter("=").trim().toIntOrNull()
+                }
+                // If we reach another FilePath or end of FileStates, stop
+                if (foundFile && trimmed.startsWith("FilePath =", ignoreCase = true) && !trimmed.contains(filePath, ignoreCase = true)) {
+                    foundFile = false
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
 }
 
 actual fun getPdfHandler(): PdfHandler = JvmPdfHandler()

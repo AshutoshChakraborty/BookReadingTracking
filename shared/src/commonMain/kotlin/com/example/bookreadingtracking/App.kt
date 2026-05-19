@@ -10,10 +10,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,12 +33,58 @@ fun App() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Book Tracker") }
+                    title = { Text("Book Tracker") },
+                    actions = {
+                        IconButton(onClick = { viewModel.refreshAllProgress() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh All")
+                        }
+                    }
                 )
             },
             floatingActionButton = {
                 FloatingActionButton(onClick = { viewModel.addPdf() }) {
                     Icon(Icons.Default.Add, contentDescription = "Add PDF")
+                }
+            },
+            bottomBar = {
+                viewModel.activeBookId?.let { activeId ->
+                    val book = viewModel.books.find { it.id == activeId }
+                    if (book != null) {
+                        Surface(
+                            tonalElevation = 8.dp,
+                            shadowElevation = 8.dp,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Reading: ${book.metadata.title}",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "Timer started...",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                Button(
+                                    onClick = { viewModel.stopReading() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red,
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Text("Stop Reading")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         ) { padding ->
@@ -47,7 +95,7 @@ fun App() {
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 150.dp),
+                        columns = GridCells.Adaptive(minSize = 180.dp),
                         contentPadding = PaddingValues(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -55,8 +103,9 @@ fun App() {
                         items(viewModel.books) { book ->
                             BookCard(
                                 book = book,
-                                onClick = { viewModel.openBook(book) },
-                                onRemove = { viewModel.removeBook(book) }
+                                onClick = { viewModel.startReading(book) },
+                                onRemove = { viewModel.removeBook(book) },
+                                onRefresh = { viewModel.refreshProgress(book) }
                             )
                         }
                     }
@@ -67,7 +116,13 @@ fun App() {
 }
 
 @Composable
-fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit) {
+fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: () -> Unit) {
+    val progress = if (book.metadata.pageCount > 0) {
+        book.currentPage.toFloat() / book.metadata.pageCount.toFloat()
+    } else 0f
+    
+    val percentage = (progress * 100).toInt()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -110,29 +165,92 @@ fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit) {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Progress Bar
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "$percentage%",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Text(
+                            text = "Page ${book.currentPage} / ${book.metadata.pageCount}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
                     Text(
-                        text = "${book.metadata.pageCount} pages",
-                        style = MaterialTheme.typography.labelSmall
+                        text = "Time: ${formatTime(book.totalTimeSpentMillis)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
             }
 
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                        shape = MaterialTheme.shapes.small
-                    )
+            // Top Buttons
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove Book",
-                    tint = MaterialTheme.colorScheme.error
-                )
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                            shape = MaterialTheme.shapes.small
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Refresh Progress",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(4.dp))
+                
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                            shape = MaterialTheme.shapes.small
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Remove Book",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
+    }
+}
+
+fun formatTime(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m"
+        else -> "< 1m"
     }
 }
