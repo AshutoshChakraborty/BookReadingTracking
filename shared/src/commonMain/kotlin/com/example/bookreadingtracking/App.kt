@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookreadingtracking.model.Book
+import com.example.bookreadingtracking.model.BookMetadata
 import com.example.bookreadingtracking.model.ReadingStatus
 import com.example.bookreadingtracking.viewmodel.BookViewModel
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,8 +121,8 @@ fun KanbanBoard(viewModel: BookViewModel) {
     val columnBounds = remember { mutableStateMapOf<ReadingStatus, androidx.compose.ui.geometry.Rect>() }
 
     Row(
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxSize().padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ReadingStatus.entries.forEach { status ->
             KanbanColumn(
@@ -140,8 +143,8 @@ fun KanbanBoard(viewModel: BookViewModel) {
                     }
                     .background(
                         if (currentTargetStatus == status) MaterialTheme.colorScheme.surfaceVariant
-                        else MaterialTheme.colorScheme.surface,
-                        RoundedCornerShape(8.dp)
+                        else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                        RoundedCornerShape(12.dp)
                     ),
                 onBookDragStart = { bookId, offset ->
                     draggedBookId = bookId
@@ -176,13 +179,13 @@ fun KanbanBoard(viewModel: BookViewModel) {
                         x = (dragOffset.x).dp,
                         y = (dragOffset.y).dp
                     )
-                    .width(200.dp)
+                    .width(220.dp)
                     .graphicsLayer {
-                        alpha = 0.7f
-                        scaleX = 1.1f
-                        scaleY = 1.1f
+                        alpha = 0.8f
+                        scaleX = 1.05f
+                        scaleY = 1.05f
                     }
-                    .shadow(12.dp)
+                    .shadow(16.dp)
             ) {
                 BookCard(book, {}, {}, {})
             }
@@ -200,19 +203,77 @@ fun KanbanColumn(
     onBookDragEnd: () -> Unit,
     viewModel: BookViewModel
 ) {
+    KanbanColumnContent(
+        status = status,
+        books = books,
+        modifier = modifier,
+        onBookDragStart = onBookDragStart,
+        onBookDrag = onBookDrag,
+        onBookDragEnd = onBookDragEnd,
+        onBookClick = { viewModel.startReading(it) },
+        onBookRemove = { viewModel.removeBook(it) },
+        onBookRefresh = { viewModel.refreshProgress(it) }
+    )
+}
+
+@Composable
+fun KanbanColumnContent(
+    status: ReadingStatus,
+    books: List<Book>,
+    modifier: Modifier = Modifier,
+    onBookDragStart: (String, Offset) -> Unit,
+    onBookDrag: (Offset) -> Unit,
+    onBookDragEnd: () -> Unit,
+    onBookClick: (Book) -> Unit,
+    onBookRemove: (Book) -> Unit,
+    onBookRefresh: (Book) -> Unit
+) {
     Column(modifier = modifier.padding(8.dp)) {
-        Text(
-            text = status.name.replace("_", " "),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        // Updated Header with Chip and Count
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(
+                    text = status.name.replace("_", " "),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = CircleShape,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = books.size.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
         
-        HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(bottom = 12.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             items(books) { book ->
                 var itemPosition by remember { mutableStateOf(Offset.Zero) }
@@ -236,9 +297,9 @@ fun KanbanColumn(
                 ) {
                     BookCard(
                         book = book,
-                        onClick = { viewModel.startReading(book) },
-                        onRemove = { viewModel.removeBook(book) },
-                        onRefresh = { viewModel.refreshProgress(book) }
+                        onClick = { onBookClick(book) },
+                        onRemove = { onBookRemove(book) },
+                        onRefresh = { onBookRefresh(book) }
                     )
                 }
             }
@@ -361,5 +422,80 @@ fun formatTime(millis: Long): String {
         hours > 0 -> "${hours}h ${minutes}m"
         minutes > 0 -> "${minutes}m"
         else -> "< 1m"
+    }
+}
+
+@Preview
+@Composable
+fun BookCardPreview() {
+    val sampleBook = Book(
+        id = "1",
+        filePath = "/path/to/book.pdf",
+        metadata = BookMetadata(
+            title = "Kotlin Multiplatform in Action",
+            author = "John Doe",
+            pageCount = 350,
+            thumbnail = null
+        ),
+        currentPage = 45,
+        totalTimeSpentMillis = 3600000,
+        status = ReadingStatus.READING
+    )
+    MaterialTheme {
+        Surface(modifier = Modifier.padding(16.dp)) {
+            BookCard(
+                book = sampleBook,
+                onClick = {},
+                onRemove = {},
+                onRefresh = {}
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun KanbanColumnPreview() {
+    val sampleBooks = listOf(
+        Book(
+            id = "1",
+            filePath = "/path/to/book1.pdf",
+            metadata = BookMetadata(
+                title = "Kotlin Multiplatform in Action",
+                author = "John Doe",
+                pageCount = 350,
+                thumbnail = null
+            ),
+            currentPage = 45,
+            totalTimeSpentMillis = 3600000,
+            status = ReadingStatus.READING
+        ),
+        Book(
+            id = "2",
+            filePath = "/path/to/book2.pdf",
+            metadata = BookMetadata(
+                title = "Compose Multiplatform for Beginners",
+                author = "Jane Smith",
+                pageCount = 200,
+                thumbnail = null
+            ),
+            currentPage = 0,
+            totalTimeSpentMillis = 0,
+            status = ReadingStatus.READING
+        )
+    )
+    MaterialTheme {
+        Surface(modifier = Modifier.fillMaxHeight().width(300.dp).padding(16.dp)) {
+            KanbanColumnContent(
+                status = ReadingStatus.READING,
+                books = sampleBooks,
+                onBookDragStart = { _, _ -> },
+                onBookDrag = { _ -> },
+                onBookDragEnd = {},
+                onBookClick = {},
+                onBookRemove = {},
+                onBookRefresh = {}
+            )
+        }
     }
 }
