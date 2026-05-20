@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookreadingtracking.model.Book
 import com.example.bookreadingtracking.model.BookMetadata
@@ -43,6 +45,7 @@ fun App() {
     val currentPlanId = viewModel.currentPlanId
     
     var editingBookId by remember { mutableStateOf<String?>(null) }
+    var viewingCoverBookId by remember { mutableStateOf<String?>(null) }
     
     AppTheme {
         if (currentPlanId == null) {
@@ -177,7 +180,11 @@ fun App() {
                             )
                         }
                     } else {
-                        KanbanBoard(viewModel, onEditNotes = { editingBookId = it })
+                        KanbanBoard(
+                            viewModel = viewModel,
+                            onEditNotes = { editingBookId = it },
+                            onShowCover = { viewingCoverBookId = it }
+                        )
                     }
                 }
             }
@@ -195,6 +202,16 @@ fun App() {
                     viewModel.updateBookNotes(bookId, notes)
                     editingBookId = null
                 }
+            )
+        }
+    }
+
+    viewingCoverBookId?.let { bookId ->
+        val book = viewModel.allBooks.find { it.id == bookId }
+        if (book != null && book.metadata.thumbnail != null) {
+            FullScreenCover(
+                thumbnail = book.metadata.thumbnail,
+                onDismiss = { viewingCoverBookId = null }
             )
         }
     }
@@ -254,7 +271,11 @@ fun NotesDialog(
 }
 
 @Composable
-fun KanbanBoard(viewModel: BookViewModel, onEditNotes: (String) -> Unit) {
+fun KanbanBoard(
+    viewModel: BookViewModel,
+    onEditNotes: (String) -> Unit,
+    onShowCover: (String) -> Unit
+) {
     var draggedBookId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var currentTargetStatus by remember { mutableStateOf<ReadingStatus?>(null) }
@@ -312,6 +333,7 @@ fun KanbanBoard(viewModel: BookViewModel, onEditNotes: (String) -> Unit) {
                     currentTargetStatus = null
                 },
                 onEditNotes = onEditNotes,
+                onShowCover = onShowCover,
                 viewModel = viewModel,
                 headerColor = titleColor
             )
@@ -336,7 +358,7 @@ fun KanbanBoard(viewModel: BookViewModel, onEditNotes: (String) -> Unit) {
                     }
                     .shadow(24.dp, RoundedCornerShape(16.dp))
             ) {
-                BookCard(book, {}, {}, {}, {})
+                BookCard(book, {}, {}, {}, {}, {})
             }
         }
     }
@@ -351,6 +373,7 @@ fun KanbanColumn(
     onBookDrag: (Offset) -> Unit,
     onBookDragEnd: () -> Unit,
     onEditNotes: (String) -> Unit,
+    onShowCover: (String) -> Unit,
     viewModel: BookViewModel,
     headerColor: androidx.compose.ui.graphics.Color
 ) {
@@ -365,6 +388,7 @@ fun KanbanColumn(
         onBookRemove = { viewModel.removeBook(it) },
         onBookRefresh = { viewModel.refreshProgress(it) },
         onEditNotes = onEditNotes,
+        onShowCover = onShowCover,
         headerColor = headerColor
     )
 }
@@ -381,6 +405,7 @@ fun KanbanColumnContent(
     onBookRemove: (Book) -> Unit,
     onBookRefresh: (Book) -> Unit,
     onEditNotes: (String) -> Unit,
+    onShowCover: (String) -> Unit,
     headerColor: androidx.compose.ui.graphics.Color
 ) {
     Column(modifier = modifier.padding(12.dp)) {
@@ -461,7 +486,8 @@ fun KanbanColumnContent(
                         onClick = { onBookClick(book) },
                         onRemove = { onBookRemove(book) },
                         onRefresh = { onBookRefresh(book) },
-                        onEditNotes = { onEditNotes(book.id) }
+                        onEditNotes = { onEditNotes(book.id) },
+                        onShowCover = { onShowCover(book.id) }
                     )
                 }
             }
@@ -470,7 +496,14 @@ fun KanbanColumnContent(
 }
 
 @Composable
-fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: () -> Unit, onEditNotes: () -> Unit) {
+fun BookCard(
+    book: Book,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    onRefresh: () -> Unit,
+    onEditNotes: () -> Unit,
+    onShowCover: () -> Unit
+) {
     val progress = if (book.metadata.pageCount > 0) {
         book.currentPage.toFloat() / book.metadata.pageCount.toFloat()
     } else 0f
@@ -579,6 +612,16 @@ fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: (
                         color = MaterialTheme.colorScheme.tertiary
                     )
                     Row {
+                        if (book.metadata.thumbnail != null) {
+                            IconButton(onClick = onShowCover, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = "Show Cover",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                         IconButton(onClick = onEditNotes, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 Icons.Default.EditNote,
@@ -587,14 +630,14 @@ fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: (
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                        IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
+                        /*IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 Icons.Default.Refresh,
                                 contentDescription = "Refresh",
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.secondary
                             )
-                        }
+                        }*/
                         IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 Icons.Default.Delete,
@@ -627,6 +670,53 @@ fun formatTime(millis: Long): String {
     }
 }
 
+@Composable
+fun FullScreenCover(
+    thumbnail: androidx.compose.ui.graphics.ImageBitmap,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.9f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                bitmap = thumbnail,
+                contentDescription = "Full Book Cover",
+                modifier = Modifier
+                    .fillMaxSize(0.85f)
+                    .shadow(16.dp)
+                    .clickable(enabled = false) { },
+                contentScale = ContentScale.Fit
+            )
+
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(24.dp)
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.2f), CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = androidx.compose.ui.graphics.Color.White
+                )
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 fun BookCardPreview() {
@@ -651,7 +741,8 @@ fun BookCardPreview() {
                 onClick = {},
                 onRemove = {},
                 onRefresh = {},
-                onEditNotes = {}
+                onEditNotes = {},
+                onShowCover = {}
             )
         }
     }
@@ -702,6 +793,7 @@ fun KanbanColumnPreview() {
                 onBookRemove = {},
                 onBookRefresh = {},
                 onEditNotes = {},
+                onShowCover = {},
                 headerColor = ReadingTitle
             )
         }

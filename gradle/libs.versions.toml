@@ -18,6 +18,9 @@ kotlinx-datetime = "0.8.0-0.6.x-compat"
 kotlinx-serialization = "1.8.0"
 material3 = "1.11.0-alpha07"
 pdfbox = "3.0.4"
+jai-imageio-jpeg2000 = "1.4.0"
+jai-imageio-core = "1.4.0"
+jbig2-imageio = "3.0.5"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -42,6 +45,9 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 wrappers-browser = { module = "org.jetbrains.kotlin-wrappers:kotlin-browser", version.ref = "kotlin-wrappers" }
 pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
+jai-imageio-jpeg2000 = { module = "com.github.jai-imageio:jai-imageio-jpeg2000", version.ref = "jai-imageio-jpeg2000" }
+jai-imageio-core = { module = "com.github.jai-imageio:jai-imageio-core", version.ref = "jai-imageio-core" }
+jbig2-imageio = { module = "org.apache.pdfbox:jbig2-imageio", version.ref = "jbig2-imageio" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

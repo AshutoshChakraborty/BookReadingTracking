@@ -72,6 +72,9 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation(libs.pdfbox)
+            implementation(libs.jai.imageio.jpeg2000)
+            implementation(libs.jai.imageio.core)
+            implementation(libs.jbig2.imageio)
         }
     }
 }
