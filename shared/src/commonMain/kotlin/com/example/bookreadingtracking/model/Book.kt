@@ -18,7 +18,8 @@ data class Book(
     val currentPage: Int = 0,
     val totalTimeSpentMillis: Long = 0,
     val lastReadTime: Long = 0,
-    val status: ReadingStatus = ReadingStatus.TO_READ
+    val status: ReadingStatus = ReadingStatus.TO_READ,
+    val notes: String = "" // New field for book notes
 )
 
 @Serializable

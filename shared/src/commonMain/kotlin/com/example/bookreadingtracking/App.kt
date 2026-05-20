@@ -10,16 +10,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -35,9 +33,8 @@ import com.example.bookreadingtracking.model.BookMetadata
 import com.example.bookreadingtracking.model.ReadingStatus
 import com.example.bookreadingtracking.viewmodel.BookViewModel
 import androidx.compose.ui.tooling.preview.Preview
-
-import androidx.compose.material.icons.filled.ArrowBack
 import com.example.bookreadingtracking.ui.PlanListScreen
+import com.example.bookreadingtracking.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +42,9 @@ fun App() {
     val viewModel: BookViewModel = viewModel { BookViewModel() }
     val currentPlanId = viewModel.currentPlanId
     
-    MaterialTheme {
+    var editingBookId by remember { mutableStateOf<String?>(null) }
+    
+    AppTheme {
         if (currentPlanId == null) {
             PlanListScreen(
                 viewModel = viewModel,
@@ -55,8 +54,14 @@ fun App() {
             val currentPlan = viewModel.plans.find { it.id == currentPlanId }
             Scaffold(
                 topBar = {
-                    TopAppBar(
-                        title = { Text(currentPlan?.title ?: "Plan Details") },
+                    CenterAlignedTopAppBar(
+                        title = { 
+                            Text(
+                                currentPlan?.title ?: "Plan Details",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            ) 
+                        },
                         navigationIcon = {
                             IconButton(onClick = { viewModel.selectPlan(null) }) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Back to Plans")
@@ -66,11 +71,19 @@ fun App() {
                             IconButton(onClick = { viewModel.refreshAllProgress() }) {
                                 Icon(Icons.Default.Refresh, contentDescription = "Refresh All")
                             }
-                        }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.primary
+                        )
                     )
                 },
                 floatingActionButton = {
-                    FloatingActionButton(onClick = { viewModel.addPdf() }) {
+                    LargeFloatingActionButton(
+                        onClick = { viewModel.addPdf() },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = "Add PDF")
                     }
                 },
@@ -80,33 +93,55 @@ fun App() {
                         if (book != null) {
                             Surface(
                                 tonalElevation = 8.dp,
-                                shadowElevation = 8.dp,
+                                shadowElevation = 12.dp,
+                                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            "Reading: ${book.metadata.title}",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            "Timer started...",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            modifier = Modifier.size(48.dp),
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.AutoMirrored.Filled.MenuBook,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            Text(
+                                                book.metadata.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                "Tracking progress...",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                            )
+                                        }
                                     }
                                     Button(
                                         onClick = { viewModel.stopReading() },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color.Red,
-                                            contentColor = Color.White
-                                        )
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError
+                                        ),
+                                        shape = RoundedCornerShape(12.dp)
                                     ) {
                                         Text("Stop Reading")
                                     }
@@ -116,22 +151,110 @@ fun App() {
                     }
                 }
             ) { padding ->
-                Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                Box(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                     if (viewModel.filteredBooks.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No books added to this plan yet. Click + to add a PDF.")
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.LibraryBooks,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No books in this plan",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                "Add a PDF to start tracking",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                     } else {
-                        KanbanBoard(viewModel)
+                        KanbanBoard(viewModel, onEditNotes = { editingBookId = it })
                     }
                 }
             }
         }
     }
+
+    editingBookId?.let { bookId ->
+        val book = viewModel.allBooks.find { it.id == bookId }
+        if (book != null) {
+            NotesDialog(
+                initialNotes = book.notes,
+                bookTitle = book.metadata.title,
+                onDismiss = { editingBookId = null },
+                onSave = { notes ->
+                    viewModel.updateBookNotes(bookId, notes)
+                    editingBookId = null
+                }
+            )
+        }
+    }
 }
 
 @Composable
-fun KanbanBoard(viewModel: BookViewModel) {
+fun NotesDialog(
+    initialNotes: String,
+    bookTitle: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var notes by remember { mutableStateOf(initialNotes) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Column {
+                Text("Book Notes", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    bookTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        text = {
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                modifier = Modifier.fillMaxWidth().height(250.dp),
+                placeholder = { Text("What's on your mind about this book?") },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                )
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(notes) },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Save Notes")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(28.dp)
+    )
+}
+
+@Composable
+fun KanbanBoard(viewModel: BookViewModel, onEditNotes: (String) -> Unit) {
     var draggedBookId by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var currentTargetStatus by remember { mutableStateOf<ReadingStatus?>(null) }
@@ -139,10 +262,17 @@ fun KanbanBoard(viewModel: BookViewModel) {
     val books = viewModel.filteredBooks
 
     Row(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         ReadingStatus.entries.forEach { status ->
+            val (bg, titleColor) = when (status) {
+                ReadingStatus.TO_READ -> ToReadBg to ToReadTitle
+                ReadingStatus.READING -> ReadingBg to ReadingTitle
+                ReadingStatus.PAUSED -> PausedBg to PausedTitle
+                ReadingStatus.READ -> ReadBg to ReadTitle
+            }
+
             KanbanColumn(
                 status = status,
                 books = books.filter { it.status == status },
@@ -160,9 +290,8 @@ fun KanbanBoard(viewModel: BookViewModel) {
                         )
                     }
                     .background(
-                        if (currentTargetStatus == status) MaterialTheme.colorScheme.surfaceVariant
-                        else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
-                        RoundedCornerShape(12.dp)
+                        if (currentTargetStatus == status) bg.copy(alpha = 0.8f) else bg,
+                        RoundedCornerShape(16.dp)
                     ),
                 onBookDragStart = { bookId, offset ->
                     draggedBookId = bookId
@@ -182,7 +311,9 @@ fun KanbanBoard(viewModel: BookViewModel) {
                     dragOffset = Offset.Zero
                     currentTargetStatus = null
                 },
-                viewModel = viewModel
+                onEditNotes = onEditNotes,
+                viewModel = viewModel,
+                headerColor = titleColor
             )
         }
     }
@@ -197,15 +328,15 @@ fun KanbanBoard(viewModel: BookViewModel) {
                         x = (dragOffset.x).dp,
                         y = (dragOffset.y).dp
                     )
-                    .width(220.dp)
+                    .width(240.dp)
                     .graphicsLayer {
-                        alpha = 0.8f
+                        alpha = 0.9f
                         scaleX = 1.05f
                         scaleY = 1.05f
                     }
-                    .shadow(16.dp)
+                    .shadow(24.dp, RoundedCornerShape(16.dp))
             ) {
-                BookCard(book, {}, {}, {})
+                BookCard(book, {}, {}, {}, {})
             }
         }
     }
@@ -219,7 +350,9 @@ fun KanbanColumn(
     onBookDragStart: (String, Offset) -> Unit,
     onBookDrag: (Offset) -> Unit,
     onBookDragEnd: () -> Unit,
-    viewModel: BookViewModel
+    onEditNotes: (String) -> Unit,
+    viewModel: BookViewModel,
+    headerColor: androidx.compose.ui.graphics.Color
 ) {
     KanbanColumnContent(
         status = status,
@@ -230,7 +363,9 @@ fun KanbanColumn(
         onBookDragEnd = onBookDragEnd,
         onBookClick = { viewModel.startReading(it) },
         onBookRemove = { viewModel.removeBook(it) },
-        onBookRefresh = { viewModel.refreshProgress(it) }
+        onBookRefresh = { viewModel.refreshProgress(it) },
+        onEditNotes = onEditNotes,
+        headerColor = headerColor
     )
 }
 
@@ -244,56 +379,64 @@ fun KanbanColumnContent(
     onBookDragEnd: () -> Unit,
     onBookClick: (Book) -> Unit,
     onBookRemove: (Book) -> Unit,
-    onBookRefresh: (Book) -> Unit
+    onBookRefresh: (Book) -> Unit,
+    onEditNotes: (String) -> Unit,
+    headerColor: androidx.compose.ui.graphics.Color
 ) {
-    Column(modifier = modifier.padding(8.dp)) {
-        // Updated Header with Chip and Count
+    Column(modifier = modifier.padding(12.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 4.dp),
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(16.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val icon = when(status) {
+                    ReadingStatus.TO_READ -> Icons.Default.BookmarkBorder
+                    ReadingStatus.READING -> Icons.Default.PlayArrow
+                    ReadingStatus.PAUSED -> Icons.Default.Pause
+                    ReadingStatus.READ -> Icons.Default.CheckCircle
+                }
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = headerColor
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = status.name.replace("_", " "),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = headerColor
                 )
             }
             
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = headerColor.copy(alpha = 0.1f),
                 shape = CircleShape,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(26.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = books.size.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = headerColor
                     )
                 }
             }
         }
         
-        HorizontalDivider(
-            modifier = Modifier.padding(bottom = 12.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
+        Spacer(modifier = Modifier.height(12.dp))
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(books) { book ->
+            items(books, key = { it.id }) { book ->
                 var itemPosition by remember { mutableStateOf(Offset.Zero) }
                 
                 Box(
@@ -317,7 +460,8 @@ fun KanbanColumnContent(
                         book = book,
                         onClick = { onBookClick(book) },
                         onRemove = { onBookRemove(book) },
-                        onRefresh = { onBookRefresh(book) }
+                        onRefresh = { onBookRefresh(book) },
+                        onEditNotes = { onEditNotes(book.id) }
                     )
                 }
             }
@@ -326,98 +470,138 @@ fun KanbanColumnContent(
 }
 
 @Composable
-fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: () -> Unit) {
+fun BookCard(book: Book, onClick: () -> Unit, onRemove: () -> Unit, onRefresh: () -> Unit, onEditNotes: () -> Unit) {
     val progress = if (book.metadata.pageCount > 0) {
         book.currentPage.toFloat() / book.metadata.pageCount.toFloat()
     } else 0f
     
     val percentage = (progress * 100).toInt()
 
-    Card(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column {
             if (book.metadata.thumbnail != null) {
                 Image(
                     bitmap = book.metadata.thumbnail,
-                    contentDescription = "Thumbnail",
+                    contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(250.dp),
-                    contentScale = ContentScale.Fit
+                        .height(180.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .height(120.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No Preview", style = MaterialTheme.typography.labelMedium)
+                    Icon(
+                        Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
                 }
             }
             
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = book.metadata.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 
                 Text(
-                    text = "By ${book.metadata.author}",
+                    text = book.metadata.author,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
-                LinearProgressIndicator(
-                    progress = { progress },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "$percentage%",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Page ${book.currentPage}/${book.metadata.pageCount}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
                 
-                Spacer(modifier = Modifier.height(4.dp))
-                
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "$percentage% Complete",
-                            style = getLabelTextStyle(10.sp),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Page ${book.currentPage} / ${book.metadata.pageCount}",
-                            style = getLabelTextStyle(9.sp)
-                        )
-                        Text(
-                            text = "Time: ${formatTime(book.totalTimeSpentMillis)}",
-                            style = getLabelTextStyle(9.sp),
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
+                    Text(
+                        text = formatTime(book.totalTimeSpentMillis),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                     Row {
-                        IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(18.dp))
+                        IconButton(onClick = onEditNotes, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.EditNote,
+                                contentDescription = "Notes",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
-                        IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                        IconButton(onClick = onRefresh, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = "Refresh",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                        IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Remove",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            )
                         }
                     }
                 }
@@ -460,13 +644,14 @@ fun BookCardPreview() {
         totalTimeSpentMillis = 3600000,
         status = ReadingStatus.READING
     )
-    MaterialTheme {
+    AppTheme {
         Surface(modifier = Modifier.padding(16.dp)) {
             BookCard(
                 book = sampleBook,
                 onClick = {},
                 onRemove = {},
-                onRefresh = {}
+                onRefresh = {},
+                onEditNotes = {}
             )
         }
     }
@@ -505,7 +690,7 @@ fun KanbanColumnPreview() {
             status = ReadingStatus.READING
         )
     )
-    MaterialTheme {
+    AppTheme {
         Surface(modifier = Modifier.fillMaxHeight().width(300.dp).padding(16.dp)) {
             KanbanColumnContent(
                 status = ReadingStatus.READING,
@@ -515,7 +700,9 @@ fun KanbanColumnPreview() {
                 onBookDragEnd = {},
                 onBookClick = {},
                 onBookRemove = {},
-                onBookRefresh = {}
+                onBookRefresh = {},
+                onEditNotes = {},
+                headerColor = ReadingTitle
             )
         }
     }

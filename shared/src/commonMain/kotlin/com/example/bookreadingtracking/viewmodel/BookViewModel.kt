@@ -157,4 +157,12 @@ class BookViewModel : ViewModel() {
             saveData()
         }
     }
+
+    fun updateBookNotes(bookId: String, newNotes: String) {
+        val index = allBooks.indexOfFirst { it.id == bookId }
+        if (index != -1) {
+            allBooks[index] = allBooks[index].copy(notes = newNotes)
+            saveData()
+        }
+    }
 }

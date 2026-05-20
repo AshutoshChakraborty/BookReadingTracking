@@ -20,9 +20,17 @@ compose.desktop {
         mainClass = "com.example.bookreadingtracking.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb,TargetFormat.Exe)
             packageName = "com.example.bookreadingtracking"
             packageVersion = "1.0.0"
+            windows {
+                // Allows users to choose the installation path
+                dirChooser = true
+                // Creates a shortcut on the desktop
+                menu = true
+                shortcut = true
+            }
         }
+
     }
 }
