@@ -1,3 +1,4 @@
+<img width="507.5" height="509" alt="Screenshot 2026-05-20 225332" src="https://github.com/user-attachments/assets/2f3ad704-8a47-4694-8182-177774e2484f" /><img width="510.5" height="509" alt="Screenshot 2026-05-20 225549" src="https://github.com/user-attachments/assets/fc7b825a-4f60-4479-b4a8-e7c0e7b26002" />
 # Book Reading Tracker
 
 A personal application designed to track reading progress for local PDF books. This project fills the gap for a reader-focused tracker that integrates directly with local files.
