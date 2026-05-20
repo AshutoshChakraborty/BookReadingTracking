@@ -83,11 +83,11 @@ fun App() {
                 },
                 floatingActionButton = {
                     LargeFloatingActionButton(
-                        onClick = { viewModel.addPdf() },
+                        onClick = { viewModel.addBook() },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add PDF")
+                        Icon(Icons.Default.Add, contentDescription = "Add Book")
                     }
                 },
                 bottomBar = {
@@ -174,7 +174,7 @@ fun App() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                "Add a PDF to start tracking",
+                                "Add a book to start tracking",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )

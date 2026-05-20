@@ -9,13 +9,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookreadingtracking.model.Book
 import com.example.bookreadingtracking.model.DataState
 import com.example.bookreadingtracking.model.Plan
-import com.example.bookreadingtracking.platform.getPdfHandler
+import com.example.bookreadingtracking.platform.getBookHandler
 import com.example.bookreadingtracking.platform.getPersistenceHandler
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 
 class BookViewModel : ViewModel() {
-    private val pdfHandler = getPdfHandler()
+    private val bookHandler = getBookHandler()
     private val persistenceHandler = getPersistenceHandler()
     
     val plans = mutableStateListOf<Plan>()
@@ -40,7 +40,7 @@ class BookViewModel : ViewModel() {
             
             // Re-extract thumbnails
             allBooks.forEachIndexed { index, book ->
-                val metadata = pdfHandler.extractMetadata(book.filePath)
+                val metadata = bookHandler.extractMetadata(book.filePath)
                 if (metadata != null) {
                     allBooks[index] = book.copy(metadata = metadata)
                 }
@@ -79,14 +79,14 @@ class BookViewModel : ViewModel() {
         currentPlanId = planId
     }
 
-    fun addPdf() {
+    fun addBook() {
         val planId = currentPlanId ?: return
         viewModelScope.launch {
-            val path = pdfHandler.pickPdf()
+            val path = bookHandler.pickBookFile()
             if (path != null) {
-                val metadata = pdfHandler.extractMetadata(path)
+                val metadata = bookHandler.extractMetadata(path)
                 if (metadata != null) {
-                    val progress = pdfHandler.getReadingProgress(path) ?: 0
+                    val progress = bookHandler.getReadingProgress(path) ?: 0
                     allBooks.add(Book(
                         id = Clock.System.now().toEpochMilliseconds().toString(),
                         planId = planId,
@@ -104,7 +104,7 @@ class BookViewModel : ViewModel() {
         stopReading() // Stop any previous session
         activeBookId = book.id
         startTimeMillis = Clock.System.now().toEpochMilliseconds()
-        pdfHandler.openPdf(book.filePath)
+        bookHandler.openBookFile(book.filePath)
     }
 
     fun stopReading() {
@@ -127,7 +127,7 @@ class BookViewModel : ViewModel() {
     }
 
     fun refreshProgress(book: Book) {
-        val progress = pdfHandler.getReadingProgress(book.filePath) ?: return
+        val progress = bookHandler.getReadingProgress(book.filePath) ?: return
         val index = allBooks.indexOfFirst { it.id == book.id }
         if (index != -1) {
             allBooks[index] = allBooks[index].copy(currentPage = progress)
@@ -137,7 +137,7 @@ class BookViewModel : ViewModel() {
 
     fun refreshAllProgress() {
         allBooks.forEachIndexed { index, book ->
-            val progress = pdfHandler.getReadingProgress(book.filePath)
+            val progress = bookHandler.getReadingProgress(book.filePath)
             if (progress != null) {
                 allBooks[index] = book.copy(currentPage = progress)
             }

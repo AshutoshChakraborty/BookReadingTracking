@@ -1,14 +1,12 @@
-// Deprecated, use BookHandler instead
 package com.example.bookreadingtracking.platform
-/*
+
 import com.example.bookreadingtracking.model.BookMetadata
 
-interface PdfHandler {
-    suspend fun pickPdf(): String?
-    fun openPdf(filePath: String)
+interface BookHandler {
+    suspend fun pickBookFile(): String?
+    fun openBookFile(filePath: String)
     suspend fun extractMetadata(filePath: String): BookMetadata?
     fun getReadingProgress(filePath: String): Int?
 }
 
-expect fun getPdfHandler(): PdfHandler
-*/
+expect fun getBookHandler(): BookHandler
