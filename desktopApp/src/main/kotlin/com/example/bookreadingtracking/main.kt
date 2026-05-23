@@ -6,7 +6,8 @@ import androidx.compose.ui.window.application
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "BookReadingTracking",
+        title = "BookReadingTracker",
+        icon = getAppIcon()
     ) {
         App()
     }

@@ -37,6 +37,12 @@ import com.example.bookreadingtracking.viewmodel.BookViewModel
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.bookreadingtracking.ui.PlanListScreen
 import com.example.bookreadingtracking.ui.theme.*
+import bookreadingtracking.shared.generated.resources.Res
+import bookreadingtracking.shared.generated.resources.app_icon
+import org.jetbrains.compose.resources.painterResource
+
+@Composable
+fun getAppIcon() = painterResource(Res.drawable.app_icon)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
